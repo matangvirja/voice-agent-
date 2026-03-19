@@ -1,0 +1,29 @@
+# AI Voice Calling Agent — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ── AI / ML ──────────────────────────────────────────────────
+groq                    # Groq Whisper STT (free tier)
+google-genai            # Gemini Flash LLM
+edge-tts                # Microsoft Edge TTS (free, Indian voices)
+
+# ── Web Server ───────────────────────────────────────────────
+fastapi                 # Async web framework
+uvicorn                 # ASGI server
+websockets              # WebSocket support
+python-multipart        # Form data parsing (Twilio webhooks)
+
+# ── Telephony ────────────────────────────────────────────────
+twilio                  # Twilio SDK for calls
+
+# ── Database ─────────────────────────────────────────────────
+asyncpg                 # Async PostgreSQL driver (Supabase)
+
+# ── Audio Processing ─────────────────────────────────────────
+sounddevice             # Microphone input / speaker output
+numpy                   # Audio array processing
+scipy                   # WAV file I/O
+
+# ── Utilities ────────────────────────────────────────────────
+python-dotenv           # Load .env file
+aiofiles                # Async file I/O
+httpx                   # Async HTTP client

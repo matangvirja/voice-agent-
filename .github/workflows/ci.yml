@@ -1,0 +1,65 @@
+name: CI — Syntax Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Check syntax — all app modules
+      run: |
+        python -m py_compile app/__init__.py
+        python -m py_compile app/stt.py
+        python -m py_compile app/llm.py
+        python -m py_compile app/tts.py
+        python -m py_compile app/pipeline.py
+        python -m py_compile app/database.py
+        python -m py_compile app/extractor.py
+        python -m py_compile app/call_handler.py
+        python -m py_compile app/main.py
+        python -m py_compile make_call.py
+        echo "All files pass syntax check"
+
+    - name: Check .env.example has all required keys
+      run: |
+        python -c "
+        required = [
+            'GROQ_API_KEY', 'GEMINI_API_KEY',
+            'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER',
+            'DATABASE_URL', 'NGROK_URL'
+        ]
+        content = open('.env.example').read()
+        missing = [k for k in required if k not in content]
+        if missing:
+            print(f'Missing keys in .env.example: {missing}')
+            exit(1)
+        print('All required keys present in .env.example')
+        "
+
+    - name: Verify .env is in .gitignore
+      run: |
+        python -c "
+        gitignore = open('.gitignore').read()
+        assert '.env' in gitignore, '.env must be in .gitignore!'
+        print('.env is properly gitignored')
+        "

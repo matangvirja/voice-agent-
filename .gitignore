@@ -1,0 +1,51 @@
+# Environment variables — NEVER commit these
+.env
+.env.*
+*.env
+
+# Virtual environment
+venv/
+env/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Audio files generated during calls
+*.mp3
+*.wav
+*.mulaw
+reply.mp3
+thinking.mp3
+test_*.mp3
+test_*.wav
+
+# Database files (SQLite if used locally)
+*.db
+*.sqlite3
+
+# Prompt cache ID (Gemini cache — regenerates automatically)
+.prompt_cache_id
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# ngrok config (contains auth token)
+ngrok.yml
+
+# Test outputs
+test_output/
