@@ -519,6 +519,28 @@ The prompt is the only file you need to change. Here are ready-to-use starting p
 
 ---
 
+## Roadmap
+
+### v1.1 — In Progress
+- [ ] Campaign manager (bulk calling from CSV)
+- [ ] Live dashboard with real-time transcripts
+- [ ] Smart callback scheduler
+
+### v1.2 — Planned
+- [ ] Upgrade to Gemini 2.5 Flash Native Audio
+      (eliminates STT+TTS latency, true real-time conversation)
+- [ ] WhatsApp follow-up after call ends
+- [ ] A/B testing for different prompt scripts
+
+### v2.0 — Vision
+- [ ] Multi-tenant SaaS with client portal
+- [ ] Call recording + replay with transcript sync
+- [ ] Sentiment analysis and quality scoring
+- [ ] CRM integrations (Salesforce, HubSpot, Zoho)
+
+
+
+
 ## Ethics & Compliance
 
 - **TRAI regulations** — Only call between 9 AM – 9 PM IST
