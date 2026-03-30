@@ -1,5 +1,7 @@
 # AI Voice Calling Agent
 
+> **v1.1.0** — Now with Live Dashboard 🎛️
+
 An AI-powered outbound voice calling agent that makes real phone calls, converses naturally in Indian regional languages (Hindi, Gujarati, Tamil, Telugu, English), qualifies leads, and logs structured CRM data — all at **zero cost**.
 
 ---
@@ -52,6 +54,8 @@ Phone Call Audio
 - **CRM extraction** — structured data (interest level, objections, next action) extracted after each call
 - **Zero cost** — Groq free tier + Gemini free tier + Edge-TTS (no key)
 - **Personalized greeting** — agent greets caller by name in their language
+- **Live Dashboard** — real-time call monitor with WebSocket transcript feed, stats, and prompt editor
+- **Hot-reload prompt** — edit the master prompt from the dashboard UI without restarting the server
 
 ---
 
@@ -66,6 +70,7 @@ Phone Call Audio
 | Database | PostgreSQL on Supabase | Free 500MB |
 | Server | FastAPI + Uvicorn | Free |
 | Tunnel | ngrok | Free |
+| Dashboard | Vanilla HTML/JS + WebSocket | Built-in |
 
 ---
 
@@ -228,8 +233,11 @@ voice-agents/
 │   ├── pipeline.py         # Local voice loop (no phone)
 │   ├── database.py         # PostgreSQL operations (Supabase)
 │   ├── extractor.py        # CRM data extraction
-│   ├── call_handler.py     # Twilio WebSocket call handler
-│   └── main.py             # FastAPI server
+│   ├── call_handler.py     # Twilio WebSocket call handler (+ dashboard broadcast)
+│   ├── dashboard.py        # Live dashboard API routes          ← NEW
+│   └── main.py             # FastAPI server v1.1.0
+├── dashboard/
+│   └── index.html          # Dashboard frontend (single-file)  ← NEW
 ├── prompts/
 │   └── master_prompt.txt   # Agent personality + instructions
 ├── docs/
@@ -244,161 +252,28 @@ voice-agents/
 
 ---
 
-## Master Prompt — The Agent's Brain
-
-The master prompt is the single most important file in the project. It lives at `prompts/master_prompt.txt` and controls **everything** the agent says and does — no conversation logic is hardcoded in Python. Changing the prompt is all you need to do to deploy this agent for a completely different business or use case.
-
-### What the master prompt controls
-
-| Section | What it defines |
-|---|---|
-| Identity & Role | Who the agent is, what company it represents, what its job is |
-| Language Rules | Which languages to support, when to switch, what script to use |
-| Personality & Tone | Formal vs casual, how to address users, filler phrases |
-| Conversation Flow | The exact sequence: greeting → qualify → present → objection → close |
-| Scripts | Word-for-word lines for greetings, objection handling, goodbyes |
-| Output Format | Response length limits, no markdown, numbers in words |
-| Safety & Compliance | Calling hours, DND handling, AI disclosure rules |
-
-### Structure of the master prompt
-
-```
-prompts/master_prompt.txt
-│
-├── # IDENTITY & ROLE
-│   What company, what product, what the agent's job is
-│
-├── # LANGUAGE DETECTION & SWITCHING RULES
-│   Mirror user's language exactly. Hindi → Hindi, Gujarati → Gujarati.
-│   Never respond in English if user spoke in a regional language.
-│
-├── # PERSONALITY & TONE
-│   Warm, professional, Indian call center style.
-│   Use "आप" not "तुम". Address as Sir/Ma'am or by name.
-│   Keep responses under 35 words — phone calls need brevity.
-│
-├── # CONVERSATION FLOW
-│   GREETING → QUALIFY → PRESENT → HANDLE_OBJECTION → COLLECT_INFO → CLOSE → GOODBYE
-│   Each stage has specific goals and transition conditions.
-│
-├── # SCRIPTS (optional but recommended)
-│   Word-for-word lines for common situations:
-│   - Opening greeting in Hindi and Gujarati
-│   - Response to "too expensive"
-│   - Response to "I already have one"
-│   - Response to "I'm busy"
-│   - Site visit booking script
-│
-├── # OUTPUT FORMAT RULES
-│   Spoken text only — no bullets, no asterisks, no markdown.
-│   Numbers in words: "das hazaar" not "10,000".
-│   End every turn with exactly one question.
-│
-└── # SAFETY & COMPLIANCE
-    Never claim to be human. Never collect OTPs or Aadhaar.
-    Call only 9AM–9PM IST. Honor DND requests immediately.
-```
-
-### How the prompt is loaded
-
-The prompt is loaded **once at startup** into memory and reused for every call — no file read per turn:
-
-```python
-# app/llm.py
-with open("prompts/master_prompt.txt", "r", encoding="utf-8") as f:
-    MASTER_PROMPT = f.read()
-
-# Injected as system_instruction on every LLM call
-response = client.models.generate_content(
-    model="gemini-2.0-flash-lite",
-    contents=messages,
-    config=types.GenerateContentConfig(
-        system_instruction=MASTER_PROMPT,  # ← your prompt goes here
-        temperature=0.7,
-        max_output_tokens=500,
-    )
-)
-```
-
-To update the agent's behavior just edit `master_prompt.txt` and restart the server. No code changes needed.
-
-### Customizing the prompt for your business
-
-The default prompt is a generic voice assistant. To use this for a specific business, replace these sections:
-
-**For a real estate company:**
-```
-# IDENTITY & ROLE
-You are Priya — AI voice assistant for XYZ Construction.
-Your job: call potential buyers about Skyline Residences, Ahmedabad.
-Qualify leads, answer questions, book site visits.
-
-# PROJECT DETAILS
-- 2 BHK: 1050 sq ft, starting ₹58 lakhs
-- 3 BHK: 1450 sq ft, starting ₹82 lakhs
-- Amenities: pool, gym, 24/7 security, EV charging
-- Possession: December 2026 | RERA: RAA12345678
-```
-
-**For a loan company:**
-```
-# IDENTITY & ROLE
-You are Rahul — AI loan advisor for QuickLoan Finance.
-Your job: qualify leads for personal/home/business loans.
-Collect: loan amount, purpose, employment type, monthly income.
-```
-
-**For customer support:**
-```
-# IDENTITY & ROLE
-You are Maya — AI support agent for Flipkart.
-Your job: resolve order issues, process returns, escalate to human if needed.
-```
-
-### Prompt writing tips for phone calls
-
-**Keep responses short.** Phone users hang up if the agent talks too long. The prompt must enforce this:
-```
-RESPONSE LENGTH — CRITICAL:
-- Maximum 35 words per response
-- One idea per sentence
-- Always end with ONE question
-- Never read lists aloud — say "we have two options" not a full list
-```
-
-**Mirror the user's language strictly.** The most common mistake is the agent switching to English. Be explicit:
-```
-LANGUAGE RULES:
-- User speaks Hindi → respond ONLY in Hindi (Devanagari script)
-- NEVER respond in English if user spoke in Hindi or Gujarati
-- If unsure → default to Hindi
-```
-
-**Handle objections gracefully.** Pre-write objection responses so the LLM doesn't improvise badly:
-```
-"Bahut mehnga hai" (Too expensive):
-→ "Samajh sakta hoon. 20 saal ke loan par sirf ₹18,000 EMI hai.
-   Kya main ek baar figure share karoon?"
-```
-
-**Set a clear end condition.** Without this, the agent never closes the call:
-```
-CLOSE THE CALL when:
-- User books a site visit → confirm date/time → thank → goodbye
-- User says not interested → offer callback → goodbye
-- User says DND/remove → apologize → end immediately
-```
-
----
-
 ## API Endpoints
+
+### Call Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/call/incoming` | Twilio webhook — handles inbound calls |
 | `WS` | `/audio-stream/{call_id}` | Live audio WebSocket |
 | `POST` | `/call/outbound` | Trigger an outbound call |
-| `GET` | `/` | Health check |
+| `GET` | `/` | Health check (returns version + active call count) |
+
+### Dashboard Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/dashboard/` | Serves the dashboard HTML UI |
+| `WS` | `/dashboard/live` | Real-time transcript WebSocket feed |
+| `GET` | `/dashboard/stats` | Aggregated stats (total calls, outcomes, languages, daily chart) |
+| `GET` | `/dashboard/recent` | Recent calls table (last 20) |
+| `GET` | `/dashboard/call/{id}` | Single call detail + full transcript |
+| `GET` | `/dashboard/prompt` | Read current master prompt |
+| `POST` | `/dashboard/prompt` | Save + hot-reload master prompt (no restart needed) |
 
 ### Make outbound call via API
 
@@ -442,13 +317,40 @@ curl -X POST http://localhost:8000/call/outbound \
 
 ---
 
+## Live Dashboard
+
+The dashboard gives you a real-time view of all active and past calls.
+
+**Start the server**, then open:
+```
+http://localhost:8000/dashboard/
+```
+
+### Dashboard Features
+
+| Feature | Description |
+|---|---|  
+| Live transcript | Conversation turns appear in real time via WebSocket |
+| Call stats | Total calls, avg turns, outcome breakdown, language breakdown |
+| Daily chart | 7-day call volume chart |
+| Recent calls | Scrollable table of last 20 calls with outcome + interest level |
+| Call detail | Click any call to see full transcript and CRM data |
+| Prompt editor | Read and edit the master prompt — saves and hot-reloads without server restart |
+
+### Hot-reload the prompt via API
+
+```bash
+curl -X POST http://localhost:8000/dashboard/prompt \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Your new prompt here..."}'
+```
+
+---
+
 ## Customization
 
-### Change the agent's persona and business
-Edit `prompts/master_prompt.txt` — this single file controls everything the agent says and does. See the [Master Prompt](#master-prompt--the-agents-brain) section above for a full guide.
-
 ### Change the agent's language
-Edit the `# LANGUAGE DETECTION & SWITCHING RULES` section in `prompts/master_prompt.txt`. To add a new language, also add its voice to `app/tts.py`.
+Edit `prompts/master_prompt.txt` — update the language rules section (or use the dashboard prompt editor).
 
 ### Change the TTS voice
 Edit `app/tts.py` — update the `VOICES` dictionary.
@@ -473,19 +375,7 @@ SILENCE_SECONDS   = 4.0   # increase for slower speakers
 ```
 
 ### Add a new conversation flow
-Edit the `# CONVERSATION FLOW` section in `prompts/master_prompt.txt`. The flow is defined as a sequence of stages — no Python changes needed.
-
-### Deploy for a different industry
-The prompt is the only file you need to change. Here are ready-to-use starting points:
-
-| Industry | What to change in the prompt |
-|---|---|
-| Real estate | Add project details, pricing, amenities, RERA number, site visit booking |
-| Loans / NBFC | Add loan products, interest rates, eligibility criteria, document checklist |
-| Insurance | Add policy details, premium ranges, claim process, renewal reminders |
-| EdTech | Add course details, fees, demo class booking, scholarship info |
-| Healthcare | Add clinic details, appointment booking, doctor availability |
-| E-commerce | Add order status handling, return policy, refund process |
+Edit `prompts/master_prompt.txt` — the CONVERSATION FLOW section defines the agent's goals and scripts.
 
 ---
 
@@ -518,28 +408,6 @@ The prompt is the only file you need to change. Here are ready-to-use starting p
 | ngrok | 1 tunnel | Development only |
 
 ---
-
-## Roadmap
-
-### v1.1 — In Progress
-- [x] Campaign manager (bulk calling from CSV)
-- [x] Live dashboard with real-time transcripts
-- [x] Smart callback scheduler
-
-### v1.2 — Planned
-- [ ] Upgrade to Gemini 2.5 Flash Native Audio
-      (eliminates STT+TTS latency, true real-time conversation)
-- [ ] WhatsApp follow-up after call ends
-- [ ] A/B testing for different prompt scripts
-
-### v2.0 — Vision
-- [ ] Multi-tenant SaaS with client portal
-- [ ] Call recording + replay with transcript sync
-- [ ] Sentiment analysis and quality scoring
-- [ ] CRM integrations (Salesforce, HubSpot, Zoho)
-
-
-
 
 ## Ethics & Compliance
 

@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VoiceAgent — Control Center</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0a0c10;
+  --surface:  #111318;
+  --surface2: #191c24;
+  --border:   #1e2130;
+  --border2:  #262b3d;
+  --accent:   #4f8eff;
+  --accent2:  #7c6fff;
+  --green:    #22c97a;
+  --yellow:   #f5c542;
+  --red:      #ff5e5e;
+  --orange:   #ff8c42;
+  --text:     #e8eaf0;
+  --text2:    #8b92a8;
+  --text3:    #4a5068;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Syne', sans-serif;
+}
+
+html { font-size: 14px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(79,142,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,142,255,.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── HEADER ── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,12,16,.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem; height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 14px;
+}
+.logo-text { font-size: 1rem; font-weight: 800; letter-spacing: -.02em; }
+.logo-text span { color: var(--accent); }
+.header-right { display: flex; align-items: center; gap: 1.5rem; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: .7rem; color: var(--green); letter-spacing: .08em; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+.clock { font-family: var(--mono); font-size: .75rem; color: var(--text3); letter-spacing: .04em; }
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky; top: 56px; z-index: 90;
+  padding: 0 2rem;
+}
+.nav-tab {
+  padding: .75rem 1.2rem;
+  font-size: .8rem; font-weight: 700;
+  color: var(--text3);
+  cursor: pointer; border: none; background: none;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: -1px;
+}
+.nav-tab:hover { color: var(--text2); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── LAYOUT ── */
+main { position: relative; z-index: 1; padding: 1.5rem 2rem 3rem; max-width: 1400px; margin: 0 auto; }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── SERVER BAR ── */
+.server-bar {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: .8rem 1.2rem;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.server-bar label { font-family: var(--mono); font-size: .68rem; color: var(--text3); white-space: nowrap; }
+.server-input {
+  flex: 1; min-width: 180px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 6px 10px;
+  font-family: var(--mono); font-size: .75rem; color: var(--text); outline: none;
+  transition: border-color .2s;
+}
+.server-input:focus { border-color: var(--accent); }
+.btn {
+  padding: 6px 16px;
+  border: none; border-radius: 6px;
+  font-family: var(--sans); font-size: .75rem; font-weight: 700;
+  cursor: pointer; transition: opacity .2s, transform .1s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: .85; }
+.btn:active { transform: scale(.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-success { background: var(--green); color: #0a0c10; }
+.btn-danger  { background: var(--red);   color: #fff; }
+.btn-ghost   { background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+.btn-sm { padding: 4px 10px; font-size: .7rem; }
+
+.conn-status { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: .68rem; white-space: nowrap; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; }
+.conn-dot.connected    { background: var(--green); }
+.conn-dot.disconnected { background: var(--red); }
+.conn-dot.connecting   { background: var(--yellow); animation: pulse 1s infinite; }
+
+/* ── STAT CARDS ── */
+.stats-row { display: grid; grid-template-columns: repeat(6,1fr); gap: 1rem; margin-bottom: 1.5rem; }
+@media(max-width:1100px){.stats-row{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(2,1fr)}}
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1rem 1.2rem; position: relative; overflow: hidden;
+  transition: border-color .2s, transform .2s;
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.stat-card::before { content:''; position:absolute; top:0;left:0;right:0;height:2px; background:var(--card-color,var(--accent)); border-radius:10px 10px 0 0; }
+.stat-label { font-family: var(--mono); font-size: .65rem; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin-bottom: .5rem; }
+.stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--card-color,var(--text)); }
+.stat-sub   { font-family: var(--mono); font-size: .65rem; color: var(--text3); margin-top: .3rem; }
+
+/* ── PANEL ── */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.panel-header {
+  padding: .9rem 1.2rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-size: .8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.panel-badge {
+  font-family: var(--mono); font-size: .62rem; padding: 2px 8px;
+  border-radius: 20px; background: var(--surface2); color: var(--text2);
+  border: 1px solid var(--border2);
+}
+.panel-badge.live { background: rgba(34,201,122,.1); color: var(--green); border-color: rgba(34,201,122,.3); }
+.panel-badge.warn { background: rgba(245,197,66,.1);  color: var(--yellow); border-color: rgba(245,197,66,.3); }
+.panel-body { padding: 1.2rem; }
+
+/* ── GRIDS ── */
+.two-col { display: grid; grid-template-columns: 1fr 340px; gap: 1rem; margin-bottom: 1rem; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+@media(max-width:900px){.two-col,.three-col{grid-template-columns:1fr}}
+
+/* ── TRANSCRIPT ── */
+.transcript-container {
+  height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 0;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+.transcript-container::-webkit-scrollbar{width:4px}
+.transcript-container::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.transcript-empty { display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:.8rem;color:var(--text3); }
+.transcript-empty .ei { font-size:2rem;opacity:.4; }
+.transcript-empty p { font-family:var(--mono);font-size:.72rem;text-align:center;line-height:1.6; }
+.transcript-msg { display:flex;gap:10px;padding:.7rem 1.2rem;border-bottom:1px solid var(--border);animation:slideIn .3s ease; }
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.transcript-msg:last-child{border-bottom:none}
+.msg-avatar { width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0;margin-top:1px; }
+.msg-avatar.user  { background:rgba(79,142,255,.15);color:var(--accent); }
+.msg-avatar.agent { background:rgba(124,111,255,.15);color:var(--accent2); }
+.msg-content{flex:1}
+.msg-meta{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.msg-role{font-family:var(--mono);font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.msg-role.user{color:var(--accent)}.msg-role.agent{color:var(--accent2)}
+.msg-lang{font-family:var(--mono);font-size:.58rem;color:var(--text3);background:var(--surface2);padding:1px 5px;border-radius:3px}
+.msg-time{font-family:var(--mono);font-size:.58rem;color:var(--text3);margin-left:auto}
+.msg-text{font-size:.82rem;line-height:1.5;color:var(--text)}
+
+/* ── ACTIVE CALLS ── */
+.active-call-item { padding:.8rem 1.2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s; }
+.active-call-item:last-child{border-bottom:none}
+.active-call-item:hover{background:var(--surface2)}
+.active-call-item.selected{background:rgba(79,142,255,.07)}
+.call-status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 1.5s ease-in-out infinite}
+.call-info{flex:1;min-width:0}
+.call-id-sm{font-family:var(--mono);font-size:.7rem;color:var(--text2);margin-bottom:2px}
+.call-phone{font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-dur{font-family:var(--mono);font-size:.65rem;color:var(--green)}
+.no-calls{padding:2rem 1.2rem;text-align:center;color:var(--text3);font-family:var(--mono);font-size:.72rem;line-height:1.8}
+
+/* ── CHARTS ── */
+.donut{width:130px;height:130px;border-radius:50%;position:relative;flex-shrink:0}
+.donut-hole{position:absolute;inset:22px;background:var(--surface);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut-total{font-size:1.4rem;font-weight:800;letter-spacing:-.04em;line-height:1}
+.donut-lbl{font-family:var(--mono);font-size:.55rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:7px;margin-left:1.5rem}
+.legend-item{display:flex;align-items:center;gap:7px}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.legend-label{font-family:var(--mono);font-size:.65rem;color:var(--text2);flex:1}
+.legend-value{font-family:var(--mono);font-size:.65rem;color:var(--text);font-weight:700}
+.chart-wrap{display:flex;align-items:center;justify-content:center;padding:.5rem 0}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:100px;padding-top:1rem}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:height .6s cubic-bezier(.34,1.56,.64,1)}
+.bar-label{font-family:var(--mono);font-size:.6rem;color:var(--text3);text-align:center;white-space:nowrap}
+.bar-val{font-family:var(--mono);font-size:.6rem;color:var(--text2);text-align:center}
+.lang-row{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.lang-info{display:flex;align-items:center;justify-content:space-between}
+.lang-name{font-size:.78rem;font-weight:600;display:flex;align-items:center;gap:6px}
+.lang-count{font-family:var(--mono);font-size:.65rem;color:var(--text3)}
+.lang-bar-bg{height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.lang-bar-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+
+/* ── RECENT TABLE ── */
+.calls-table{width:100%;border-collapse:collapse}
+.calls-table th{font-family:var(--mono);font-size:.62rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:.7rem 1rem;border-bottom:1px solid var(--border);font-weight:500}
+.calls-table td{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:.78rem;vertical-align:middle}
+.calls-table tr:last-child td{border-bottom:none}
+.calls-table tbody tr{transition:background .15s;cursor:pointer}
+.calls-table tbody tr:hover{background:var(--surface2)}
+.outcome-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.outcome-badge.interested     {background:rgba(34,201,122,.12);color:var(--green)}
+.outcome-badge.not_interested {background:rgba(255,94,94,.12);color:var(--red)}
+.outcome-badge.callback       {background:rgba(245,197,66,.12);color:var(--yellow)}
+.outcome-badge.unknown        {background:rgba(139,146,168,.12);color:var(--text2)}
+.outcome-badge.wrong_number   {background:rgba(255,140,66,.12);color:var(--orange)}
+.lang-flag{font-family:var(--mono);font-size:.65rem;padding:2px 6px;background:var(--surface2);border:1px solid var(--border2);border-radius:3px;color:var(--text2)}
+.interest-wrap{display:flex;align-items:center;gap:6px}
+.interest-bg{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.interest-fill{height:100%;border-radius:2px}
+.recent-scroll{max-height:360px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.recent-scroll::-webkit-scrollbar{width:4px}
+.recent-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ── MAKE CALL PANEL ── */
+.make-call-form { display: flex; flex-direction: column; gap: 1rem; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-family: var(--mono); font-size: .68rem; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.form-input, .form-select {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 8px 12px;
+  font-family: var(--mono); font-size: .8rem; color: var(--text); outline: none;
+  transition: border-color .2s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+.form-select option { background: var(--surface2); }
+.form-hint { font-family: var(--mono); font-size: .62rem; color: var(--text3); margin-top: 2px; }
+
+.call-result {
+  margin-top: .5rem; padding: .8rem 1rem;
+  border-radius: 6px; font-family: var(--mono); font-size: .72rem;
+  display: none;
+}
+.call-result.success { background: rgba(34,201,122,.1); color: var(--green); border: 1px solid rgba(34,201,122,.2); }
+.call-result.error   { background: rgba(255,94,94,.1);  color: var(--red);   border: 1px solid rgba(255,94,94,.2); }
+
+/* Campaign CSV uploader */
+.csv-drop {
+  border: 2px dashed var(--border2); border-radius: 8px;
+  padding: 2rem 1rem; text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  color: var(--text3); font-family: var(--mono); font-size: .75rem;
+}
+.csv-drop:hover, .csv-drop.drag { border-color: var(--accent); background: rgba(79,142,255,.04); color: var(--text2); }
+.csv-drop .drop-icon { font-size: 1.8rem; margin-bottom: .5rem; }
+.csv-preview { margin-top: 1rem; }
+.csv-row {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .5rem .8rem; border-radius: 6px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  margin-bottom: .4rem; font-family: var(--mono); font-size: .7rem;
+}
+.csv-row .csv-name { font-weight: 700; color: var(--text); flex: 1; }
+.csv-row .csv-phone { color: var(--accent); }
+.csv-row .csv-lang { color: var(--text3); }
+.campaign-controls { display: flex; gap: .5rem; margin-top: 1rem; }
+
+/* Call log inside make call tab */
+.mini-log { height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+.mini-log::-webkit-scrollbar{width:4px}
+.mini-log::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+.log-item { padding: .4rem .8rem; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: .68rem; display: flex; align-items: center; gap: .5rem; }
+.log-item:last-child{border-bottom:none}
+.log-time { color: var(--text3); white-space: nowrap; }
+.log-text { color: var(--text2); }
+.log-text.success { color: var(--green); }
+.log-text.error   { color: var(--red); }
+.log-text.info    { color: var(--accent); }
+
+/* ── PROMPT EDITOR ── */
+.prompt-editor-wrap { display: grid; grid-template-columns: 1fr 280px; gap: 1rem; }
+@media(max-width:900px){.prompt-editor-wrap{grid-template-columns:1fr}}
+
+.prompt-textarea {
+  width: 100%; min-height: 520px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 1rem;
+  font-family: var(--mono); font-size: .78rem; color: var(--text);
+  outline: none; resize: vertical; line-height: 1.7;
+  transition: border-color .2s;
+}
+.prompt-textarea:focus { border-color: var(--accent); }
+
+.prompt-sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+.prompt-meta {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 1rem;
+}
+.meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: .6rem; font-family: var(--mono); font-size: .7rem; }
+.meta-row:last-child{margin-bottom:0}
+.meta-key { color: var(--text3); }
+.meta-val { color: var(--text2); font-weight: 700; }
+.meta-val.changed { color: var(--yellow); }
+
+.prompt-actions { display: flex; flex-direction: column; gap: .5rem; }
+
+.section-list { display: flex; flex-direction: column; gap: 0; }
+.section-item {
+  padding: .5rem .8rem; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: .68rem; cursor: pointer;
+  color: var(--text2); transition: background .15s, color .15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.section-item:last-child{border-bottom:none}
+.section-item:hover { background: var(--surface2); color: var(--text); }
+.section-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+.diff-badge {
+  display: inline-block; padding: 2px 6px; border-radius: 3px;
+  font-family: var(--mono); font-size: .6rem; font-weight: 700;
+  background: rgba(245,197,66,.15); color: var(--yellow);
+  border: 1px solid rgba(245,197,66,.3);
+}
+
+.save-status {
+  padding: .6rem .8rem; border-radius: 6px;
+  font-family: var(--mono); font-size: .7rem;
+  text-align: center; display: none;
+}
+.save-status.saving  { background: rgba(79,142,255,.1);  color: var(--accent); display:block; }
+.save-status.saved   { background: rgba(34,201,122,.1);  color: var(--green);  display:block; }
+.save-status.error   { background: rgba(255,94,94,.1);   color: var(--red);    display:block; }
+
+/* template cards */
+.template-card {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 6px; padding: .7rem .9rem; cursor: pointer;
+  transition: border-color .2s, background .2s; margin-bottom: .4rem;
+}
+.template-card:hover { border-color: var(--accent); background: rgba(79,142,255,.04); }
+.template-title { font-size: .78rem; font-weight: 700; margin-bottom: 2px; }
+.template-desc  { font-family: var(--mono); font-size: .62rem; color: var(--text3); }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 10px 16px;
+  font-family: var(--mono); font-size: .72rem; color: var(--text);
+  z-index: 999; transform: translateY(20px); opacity: 0;
+  transition: all .3s ease; max-width: 300px;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📞</div>
+    <div class="logo-text">Voice<span>Agent</span></div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div class="clock" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</button>
+  <button class="nav-tab" onclick="switchTab('makecall')">📞 Make Call</button>
+  <button class="nav-tab" onclick="switchTab('prompt')">🧠 Prompt Editor</button>
+</div>
+
+<main>
+
+  <!-- ── SERVER BAR (shared) ── -->
+  <div class="server-bar">
+    <label>Server:</label>
+    <input class="server-input" id="serverUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+    <button class="btn btn-primary" onclick="connect()">Connect</button>
+    <div class="conn-status">
+      <div class="conn-dot disconnected" id="connDot"></div>
+      <span id="connText">Disconnected</span>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- TAB 1: DASHBOARD                                       -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="tab-content active" id="tab-dashboard">
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem">
+      <h1 style="font-size:1.6rem;font-weight:800;letter-spacing:-.03em">Call <span style="color:var(--accent)">Intelligence</span></h1>
+      <div style="font-family:var(--mono);font-size:.68rem;color:var(--text3)" id="lastUpdated">—</div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-row">
+      <div class="stat-card" style="--card-color:var(--accent)">
+        <div class="stat-label">Total Calls</div>
+        <div class="stat-value" id="statTotal">—</div>
+        <div class="stat-sub">all time</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--green)">
+        <div class="stat-label">Active Now</div>
+        <div class="stat-value" id="statActive">—</div>
+        <div class="stat-sub">live calls</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--green)">
+        <div class="stat-label">Interested</div>
+        <div class="stat-value" id="statInterested">—</div>
+        <div class="stat-sub">leads</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--yellow)">
+        <div class="stat-label">Callbacks</div>
+        <div class="stat-value" id="statCallback">—</div>
+        <div class="stat-sub">scheduled</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--accent2)">
+        <div class="stat-label">Avg Turns</div>
+        <div class="stat-value" id="statAvgTurns">—</div>
+        <div class="stat-sub">per call</div>
+      </div>
+      <div class="stat-card" style="--card-color:var(--orange)">
+        <div class="stat-label">Top Language</div>
+        <div class="stat-value" style="font-size:1.2rem" id="statTopLang">—</div>
+        <div class="stat-sub" id="statTopLangSub">most used</div>
+      </div>
+    </div>
+
+    <!-- Live transcript + active calls -->
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">💬 Live Transcript</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="panel-badge live" id="transcriptBadge">WAITING</span>
+            <span class="panel-badge" id="activeCallLabel">No active call</span>
+          </div>
+        </div>
+        <div class="transcript-container" id="transcriptContainer">
+          <div class="transcript-empty">
+            <div class="ei">🎙️</div>
+            <p>Waiting for an active call...<br>Transcript appears here in real time</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📡 Active Calls</div>
+          <span class="panel-badge" id="activeCountBadge">0 live</span>
+        </div>
+        <div id="activeCallsList">
+          <div class="no-calls">No active calls<br>right now</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="three-col">
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🎯 Outcomes</div></div>
+        <div class="panel-body">
+          <div class="chart-wrap">
+            <div class="donut" id="donutChart">
+              <div class="donut-hole">
+                <div class="donut-total" id="donutTotal">0</div>
+                <div class="donut-lbl">calls</div>
+              </div>
+            </div>
+            <div class="donut-legend" id="donutLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">🗣️ Languages</div></div>
+        <div class="panel-body">
+          <div id="langList"><div style="color:var(--text3);font-family:var(--mono);font-size:.7rem">Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📊 Daily Volume</div>
+          <span class="panel-badge">last 7 days</span>
+        </div>
+        <div class="panel-body">
+          <div class="bar-chart" id="barChart">
+            <div style="color:var(--text3);font-family:var(--mono);font-size:.7rem">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent calls table -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📋 Recent Calls</div>
+        <span class="panel-badge" id="recentBadge">0 calls</span>
+      </div>
+      <div class="recent-scroll">
+        <table class="calls-table">
+          <thead><tr>
+            <th>Call ID</th><th>Phone</th><th>Language</th>
+            <th>Turns</th><th>Outcome</th><th>Interest</th>
+            <th>Next Action</th><th>Time</th>
+          </tr></thead>
+          <tbody id="recentBody">
+            <tr><td colspan="8" style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:.7rem;padding:2rem">Connect to server to load history</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tab-dashboard -->
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- TAB 2: MAKE CALL                                       -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-makecall">
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem">
+      <h1 style="font-size:1.6rem;font-weight:800;letter-spacing:-.03em">Make a <span style="color:var(--green)">Call</span></h1>
+    </div>
+
+    <div style="display:grid;grid-template-columns:420px 1fr;gap:1rem;align-items:start">
+    <!-- LEFT: single call form -->
+    <div style="display:flex;flex-direction:column;gap:1rem">
+
+      <!-- Single call -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📞 Single Call</div>
+          <span class="panel-badge">instant</span>
+        </div>
+        <div class="panel-body">
+          <div class="make-call-form">
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input class="form-input" id="callPhone" placeholder="+919876543210" type="tel">
+              <div class="form-hint">Include country code. Must be verified in Twilio trial.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Name</label>
+              <input class="form-input" id="callName" placeholder="Rahul" type="text">
+              <div class="form-hint">Used in the personalized greeting.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Language</label>
+              <select class="form-select" id="callLang">
+                <option value="hi">🇮🇳 Hindi</option>
+                <option value="gu">🇮🇳 Gujarati</option>
+                <option value="ta">🇮🇳 Tamil</option>
+                <option value="te">🇮🇳 Telugu</option>
+                <option value="mr">🇮🇳 Marathi</option>
+                <option value="en">🌐 English</option>
+              </select>
+              <div class="form-hint">Agent will greet in this language.</div>
+            </div>
+
+            <button class="btn btn-success" onclick="makeSingleCall()" id="callBtn" style="width:100%;padding:10px">
+              📞 Call Now
+            </button>
+
+            <div class="call-result" id="callResult"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Campaign CSV -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📋 Campaign — Bulk Calls</div>
+          <span class="panel-badge warn">CSV upload</span>
+        </div>
+        <div class="panel-body">
+
+          <div class="csv-drop" id="csvDrop"
+               onclick="document.getElementById('csvFile').click()"
+               ondragover="event.preventDefault();this.classList.add('drag')"
+               ondragleave="this.classList.remove('drag')"
+               ondrop="handleCsvDrop(event)">
+            <div class="drop-icon">📄</div>
+            <div>Drop CSV file here or click to browse</div>
+            <div style="font-size:.6rem;margin-top:4px;color:var(--text3)">Columns: name, phone, lang</div>
+          </div>
+          <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="loadCsvFile(event)">
+
+          <div class="csv-preview" id="csvPreview" style="display:none">
+            <div style="font-family:var(--mono);font-size:.68rem;color:var(--text3);margin-bottom:.5rem" id="csvSummary"></div>
+            <div id="csvRows"></div>
+          </div>
+
+          <div class="campaign-controls" id="campaignControls" style="display:none">
+            <button class="btn btn-success" onclick="startCampaign()" style="flex:1">▶ Start Campaign</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearCsv()">Clear</button>
+          </div>
+
+          <div style="font-family:var(--mono);font-size:.65rem;color:var(--text3);margin-top:.8rem;line-height:1.7">
+            CSV format example:<br>
+            <span style="color:var(--text2)">name,phone,lang<br>
+            Rahul,+919876543210,hi<br>
+            Priya,+918765432109,gu</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: call activity log -->
+    <div class="panel" style="height:fit-content">
+      <div class="panel-header">
+        <div class="panel-title">📡 Call Activity Log</div>
+        <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+      </div>
+      <div class="mini-log" id="callLog">
+        <div class="log-item">
+          <span class="log-time">--:--:--</span>
+          <span class="log-text">Waiting for calls...</span>
+        </div>
+      </div>
+    </div>
+    </div>
+
+  </div><!-- /tab-makecall -->
+
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- TAB 3: PROMPT EDITOR                                   -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-prompt">
+
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem">
+      <h1 style="font-size:1.6rem;font-weight:800;letter-spacing:-.03em">Prompt <span style="color:var(--accent2)">Editor</span></h1>
+      <div style="display:flex;gap:.5rem">
+        <button class="btn btn-ghost" onclick="loadPrompt()">↺ Reload</button>
+        <button class="btn btn-primary" onclick="savePrompt()" id="saveBtn">💾 Save &amp; Apply</button>
+      </div>
+    </div>
+
+    <div class="prompt-editor-wrap">
+
+      <!-- Editor -->
+      <div>
+        <textarea class="prompt-textarea" id="promptEditor"
+                  placeholder="Loading prompt from server..."
+                  oninput="onPromptChange()" spellcheck="false"></textarea>
+        <div class="save-status" id="saveStatus"></div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="prompt-sidebar">
+
+        <!-- Stats -->
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">📊 Prompt Stats</div></div>
+          <div class="panel-body" style="padding:.8rem 1rem">
+            <div class="meta-row"><span class="meta-key">Words</span><span class="meta-val" id="pmWords">—</span></div>
+            <div class="meta-row"><span class="meta-key">Chars</span><span class="meta-val" id="pmChars">—</span></div>
+            <div class="meta-row"><span class="meta-key">Lines</span><span class="meta-val" id="pmLines">—</span></div>
+            <div class="meta-row"><span class="meta-key">Sections</span><span class="meta-val" id="pmSections">—</span></div>
+            <div class="meta-row"><span class="meta-key">Changed</span><span class="meta-val changed" id="pmChanged">No</span></div>
+            <div class="meta-row"><span class="meta-key">Last saved</span><span class="meta-val" id="pmLastSaved">—</span></div>
+          </div>
+        </div>
+
+        <!-- Quick jump -->
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title">🔖 Jump to Section</div></div>
+          <div class="section-list" id="sectionList">
+            <div style="padding:.8rem;font-family:var(--mono);font-size:.68rem;color:var(--text3)">Load prompt to see sections</div>
+          </div>
+        </div>
+
+        <!-- Templates -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">📁 Templates</div>
+            <span class="panel-badge">quick start</span>
+          </div>
+          <div class="panel-body">
+            <div class="template-card" onclick="loadTemplate('realestate')">
+              <div class="template-title">🏠 Real Estate</div>
+              <div class="template-desc">Site visit booking, flat details, RERA compliance</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('loan')">
+              <div class="template-title">💰 Loan / NBFC</div>
+              <div class="template-desc">Lead qualification, EMI calculation, document collection</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('support')">
+              <div class="template-title">🎧 Customer Support</div>
+              <div class="template-desc">Order queries, return processing, escalation handling</div>
+            </div>
+            <div class="template-card" onclick="loadTemplate('generic')">
+              <div class="template-title">🤖 Generic Agent</div>
+              <div class="template-desc">Blank multilingual template — customize from scratch</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div><!-- /tab-prompt -->
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────────────
+let serverUrl      = 'http://localhost:8000';
+let wsUrl          = 'ws://localhost:8000';
+let ws             = null;
+let pollTimer      = null;
+let activeCalls    = {};
+let selectedCallId = null;
+let promptOriginal = '';
+let csvContacts    = [];
+
+const LANG = {
+  hi: {name:'Hindi',    emoji:'🇮🇳', color:'#4f8eff'},
+  gu: {name:'Gujarati', emoji:'🇮🇳', color:'#7c6fff'},
+  ta: {name:'Tamil',    emoji:'🇮🇳', color:'#22c97a'},
+  te: {name:'Telugu',   emoji:'🇮🇳', color:'#f5c542'},
+  mr: {name:'Marathi',  emoji:'🇮🇳', color:'#ff8c42'},
+  en: {name:'English',  emoji:'🌐',  color:'#8b92a8'},
+};
+
+const OUTCOME_COLORS = {
+  interested:'#22c97a', not_interested:'#ff5e5e',
+  callback:'#f5c542',   wrong_number:'#ff8c42', unknown:'#4a5068',
+};
+const INTEREST_W = {high:'100%',medium:'60%',low:'30%',none:'8%'};
+const INTEREST_C = {high:'#22c97a',medium:'#f5c542',low:'#ff8c42',none:'#4a5068'};
+
+// ────────────────────────────────────────────────────────────
+// CLOCK
+// ────────────────────────────────────────────────────────────
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-IN', {hour12:false});
+}, 1000);
+
+// ────────────────────────────────────────────────────────────
+// TABS
+// ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'prompt') loadPrompt();
+}
+
+// ────────────────────────────────────────────────────────────
+// TOAST
+// ────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ────────────────────────────────────────────────────────────
+// CONNECTION
+// ────────────────────────────────────────────────────────────
+function setConn(status) {
+  const d = document.getElementById('connDot');
+  const t = document.getElementById('connText');
+  d.className = 'conn-dot ' + status;
+  t.textContent = {connected:'Connected',disconnected:'Disconnected',connecting:'Connecting...'}[status]||status;
+}
+
+function connect() {
+  serverUrl = document.getElementById('serverUrl').value.trim().replace(/\/$/,'');
+  wsUrl     = serverUrl.replace('http','ws');
+  setConn('connecting');
+  fetch(serverUrl + '/')
+    .then(r => r.json())
+    .then(d => {
+      setConn('connected');
+      toast('✓ Connected — ' + (d.active_calls||0) + ' active calls');
+      startPolling();
+      connectWS();
+      addLog('Connected to ' + serverUrl, 'info');
+    })
+    .catch(() => {
+      setConn('disconnected');
+      toast('✗ Cannot reach server');
+      addLog('Failed to connect to ' + serverUrl, 'error');
+    });
+}
+
+// ────────────────────────────────────────────────────────────
+// WEBSOCKET
+// ────────────────────────────────────────────────────────────
+function connectWS() {
+  if (ws) ws.close();
+  ws = new WebSocket(wsUrl + '/dashboard/live');
+  ws.onopen  = () => { document.getElementById('transcriptBadge').textContent = 'CONNECTED'; };
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'call_started') {
+      activeCalls[msg.call_id] = {call_id:msg.call_id, phone:msg.phone||'unknown', started:Date.now(), turns:0};
+      updateActiveList();
+      if (!selectedCallId) selectCall(msg.call_id);
+      toast('📞 New call: ' + msg.call_id);
+      addLog('Call started: #' + msg.call_id + ' → ' + msg.phone, 'info');
+    }
+    else if (msg.type === 'turn') {
+      if (activeCalls[msg.call_id]) activeCalls[msg.call_id].turns++;
+      if (msg.call_id === selectedCallId || !selectedCallId) addTranscriptMsg(msg);
+    }
+    else if (msg.type === 'call_ended') {
+      delete activeCalls[msg.call_id];
+      if (selectedCallId === msg.call_id) {
+        selectedCallId = null;
+        const r = Object.keys(activeCalls);
+        if (r.length) selectCall(r[0]);
+      }
+      updateActiveList();
+      fetchStats();
+      toast('📴 Call ended: ' + msg.call_id);
+      addLog('Call ended: #' + msg.call_id, 'success');
+    }
+  };
+  ws.onclose = () => {
+    document.getElementById('transcriptBadge').textContent = 'WAITING';
+    setTimeout(() => { if(serverUrl) connectWS(); }, 3000);
+  };
+}
+
+// ────────────────────────────────────────────────────────────
+// ACTIVE CALLS LIST
+// ────────────────────────────────────────────────────────────
+function selectCall(id) {
+  selectedCallId = id;
+  document.querySelectorAll('.active-call-item').forEach(el =>
+    el.classList.toggle('selected', el.dataset.callId === id));
+  document.getElementById('activeCallLabel').textContent = 'Call: #' + id;
+  clearTranscript();
+}
+
+function updateActiveList() {
+  const list  = document.getElementById('activeCallsList');
+  const badge = document.getElementById('activeCountBadge');
+  const keys  = Object.keys(activeCalls);
+  badge.textContent = keys.length + ' live';
+  if (!keys.length) {
+    list.innerHTML = '<div class="no-calls">No active calls<br>right now</div>';
+    selectedCallId = null;
+    document.getElementById('activeCallLabel').textContent = 'No active call';
+    clearTranscript();
+    return;
+  }
+  list.innerHTML = keys.map(id => {
+    const c = activeCalls[id];
+    const e = Math.floor((Date.now()-c.started)/1000);
+    const m = String(Math.floor(e/60)).padStart(2,'0');
+    const s = String(e%60).padStart(2,'0');
+    return `<div class="active-call-item ${id===selectedCallId?'selected':''}"
+      data-call-id="${id}" onclick="selectCall('${id}')">
+      <div class="call-status-dot"></div>
+      <div class="call-info">
+        <div class="call-id-sm">#${id}</div>
+        <div class="call-phone">${c.phone}</div>
+      </div>
+      <div class="call-dur">${m}:${s}</div>
+    </div>`;
+  }).join('');
+  setTimeout(updateActiveList, 1000);
+}
+
+// ────────────────────────────────────────────────────────────
+// TRANSCRIPT
+// ────────────────────────────────────────────────────────────
+function clearTranscript() {
+  document.getElementById('transcriptContainer').innerHTML = `
+    <div class="transcript-empty">
+      <div class="ei">🎙️</div>
+      <p>Waiting for an active call...<br>Transcript appears here in real time</p>
+    </div>`;
+}
+
+function addTranscriptMsg(msg) {
+  const c   = document.getElementById('transcriptContainer');
+  const emp = c.querySelector('.transcript-empty');
+  if (emp) emp.remove();
+  const lc   = LANG[msg.language] || {name:msg.language||'?', emoji:''};
+  const time = new Date().toLocaleTimeString('en-IN',{hour12:false});
+  const el   = document.createElement('div');
+  el.className = 'transcript-msg';
+  el.innerHTML = `
+    <div class="msg-avatar ${msg.role}">${msg.role==='user'?'U':'A'}</div>
+    <div class="msg-content">
+      <div class="msg-meta">
+        <span class="msg-role ${msg.role}">${msg.role==='user'?'User':'Agent'}</span>
+        <span class="msg-lang">${lc.emoji} ${lc.name}</span>
+        <span class="msg-time">${time}</span>
+      </div>
+      <div class="msg-text">${esc(msg.text)}</div>
+    </div>`;
+  c.appendChild(el);
+  c.scrollTop = c.scrollHeight;
+}
+
+function esc(t) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(t));
+  return d.innerHTML;
+}
+
+// ────────────────────────────────────────────────────────────
+// POLLING
+// ────────────────────────────────────────────────────────────
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  fetchStats(); fetchRecent();
+  pollTimer = setInterval(() => { fetchStats(); fetchRecent(); }, 5000);
+}
+
+async function fetchStats() {
+  try {
+    const r = await fetch(serverUrl + '/dashboard/stats');
+    renderStats(await r.json());
+    document.getElementById('lastUpdated').textContent =
+      'Updated: ' + new Date().toLocaleTimeString('en-IN',{hour12:false});
+  } catch(e){}
+}
+
+async function fetchRecent() {
+  try {
+    const r = await fetch(serverUrl + '/dashboard/recent?limit=20');
+    renderRecent((await r.json()).calls || []);
+  } catch(e){}
+}
+
+// ────────────────────────────────────────────────────────────
+// RENDER STATS
+// ────────────────────────────────────────────────────────────
+function renderStats(d) {
+  const o = d.outcomes || {}, l = d.languages || {};
+  document.getElementById('statTotal').textContent     = d.total_calls || 0;
+  document.getElementById('statActive').textContent    = d.active_calls || 0;
+  document.getElementById('statInterested').textContent= o.interested || 0;
+  document.getElementById('statCallback').textContent  = o.callback || 0;
+  document.getElementById('statAvgTurns').textContent  = d.avg_turns ? parseFloat(d.avg_turns).toFixed(1) : '—';
+  const top = Object.entries(l).sort((a,b)=>b[1]-a[1])[0];
+  if (top) {
+    const lc = LANG[top[0]] || {name:top[0],emoji:''};
+    document.getElementById('statTopLang').textContent    = lc.emoji + ' ' + lc.name;
+    document.getElementById('statTopLangSub').textContent = top[1] + ' calls';
+  }
+  renderDonut(o, d.total_calls||0);
+  renderLangs(l, d.total_calls||1);
+  renderBars(d.daily||[]);
+}
+
+function renderDonut(o, total) {
+  const chart  = document.getElementById('donutChart');
+  const legend = document.getElementById('donutLegend');
+  document.getElementById('donutTotal').textContent = total;
+  const entries = Object.entries(OUTCOME_COLORS)
+    .map(([k,c]) => ({k,c,n:o[k]||0})).filter(e=>e.n>0);
+  if (!entries.length) {
+    chart.style.background = 'var(--border2)';
+    legend.innerHTML = '<div style="color:var(--text3);font-family:var(--mono);font-size:.65rem">No data</div>';
+    return;
+  }
+  let angle = 0;
+  const segs = entries.map(e => {
+    const pct = (e.n/total)*100;
+    const seg = `${e.c} ${angle}% ${angle+pct}%`;
+    angle += pct; return seg;
+  });
+  chart.style.background = `conic-gradient(${segs.join(',')})`;
+  legend.innerHTML = entries.map(e => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${e.c}"></div>
+      <span class="legend-label">${cap(e.k.replace('_',' '))}</span>
+      <span class="legend-value">${e.n}</span>
+    </div>`).join('');
+}
+
+function renderLangs(langs, total) {
+  const el = document.getElementById('langList');
+  const entries = Object.entries(langs).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) { el.innerHTML='<div style="color:var(--text3);font-family:var(--mono);font-size:.7rem">No calls yet</div>'; return; }
+  el.innerHTML = entries.map(([code,cnt]) => {
+    const lc = LANG[code]||{name:code,emoji:'🌐',color:'#8b92a8'};
+    const pct = Math.round((cnt/total)*100);
+    return `<div class="lang-row">
+      <div class="lang-info">
+        <div class="lang-name"><span>${lc.emoji}</span>${lc.name}</div>
+        <div class="lang-count">${cnt} (${pct}%)</div>
+      </div>
+      <div class="lang-bar-bg"><div class="lang-bar-fill" style="width:${pct}%;background:${lc.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderBars(daily) {
+  const el = document.getElementById('barChart');
+  if (!daily.length) { el.innerHTML='<div style="color:var(--text3);font-family:var(--mono);font-size:.7rem">No data</div>'; return; }
+  const max = Math.max(...daily.map(d=>d.count),1);
+  el.innerHTML = daily.map(d => {
+    const h   = Math.round((d.count/max)*80)+4;
+    const day = new Date(d.date).toLocaleDateString('en-IN',{weekday:'short'});
+    return `<div class="bar-group">
+      <div class="bar-val">${d.count||''}</div>
+      <div class="bar" style="height:${h}px;background:var(--accent);opacity:.8"></div>
+      <div class="bar-label">${day}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderRecent(calls) {
+  const tbody = document.getElementById('recentBody');
+  document.getElementById('recentBadge').textContent = calls.length + ' calls';
+  if (!calls.length) {
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);font-family:var(--mono);font-size:.7rem;padding:2rem">No calls yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = calls.map(c => {
+    const lc = LANG[c.language_used]||{name:c.language_used||'?',emoji:''};
+    const o  = c.outcome||'unknown', i = c.interest_level||'none';
+    const t  = c.started ? new Date(c.started).toLocaleString('en-IN',{hour12:false,month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+    return `<tr>
+      <td><span style="font-family:var(--mono);font-size:.7rem;color:var(--accent)">#${c.call_id}</span></td>
+      <td style="font-family:var(--mono);font-size:.7rem">${c.phone||'—'}</td>
+      <td><span class="lang-flag">${lc.emoji} ${lc.name}</span></td>
+      <td style="font-family:var(--mono);font-size:.7rem;color:var(--text2)">${c.total_turns||0}</td>
+      <td><span class="outcome-badge ${o}">${o.replace('_',' ')}</span></td>
+      <td><div class="interest-wrap">
+        <div class="interest-bg" style="width:60px"><div class="interest-fill" style="width:${INTEREST_W[i]};background:${INTEREST_C[i]}"></div></div>
+        <span style="font-family:var(--mono);font-size:.62rem;color:var(--text3)">${i}</span>
+      </div></td>
+      <td style="font-family:var(--mono);font-size:.65rem;color:var(--text2)">${(c.next_action||'—').replace('_',' ')}</td>
+      <td style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">${t}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ────────────────────────────────────────────────────────────
+// MAKE CALL
+// ────────────────────────────────────────────────────────────
+async function makeSingleCall() {
+  const phone = document.getElementById('callPhone').value.trim();
+  const name  = document.getElementById('callName').value.trim() || 'Sir/Ma\'am';
+  const lang  = document.getElementById('callLang').value;
+  const res   = document.getElementById('callResult');
+  const btn   = document.getElementById('callBtn');
+
+  if (!phone) { showCallResult('error', '✗ Phone number is required'); return; }
+  if (!phone.startsWith('+')) { showCallResult('error', '✗ Include country code: +919876543210'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Initiating...';
+  addLog('Calling ' + name + ' (' + phone + ') in ' + (LANG[lang]||{name:lang}).name + '...', 'info');
+
+  try {
+    const r = await fetch(serverUrl + '/call/outbound', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({to: phone, name, lang})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    showCallResult('success', '✓ Call initiated! SID: ' + d.call_sid);
+    addLog('✓ Call to ' + phone + ' — SID: ' + d.call_sid, 'success');
+    toast('📞 Calling ' + name + '...');
+  } catch(e) {
+    showCallResult('error', '✗ ' + e.message);
+    addLog('✗ Call failed: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = '📞 Call Now';
+}
+
+function showCallResult(type, msg) {
+  const el = document.getElementById('callResult');
+  el.className = 'call-result ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── CSV Campaign ──
+function loadCsvFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => parseCsv(ev.target.result);
+  reader.readAsText(file);
+}
+
+function handleCsvDrop(e) {
+  e.preventDefault();
+  document.getElementById('csvDrop').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.name.endsWith('.csv')) { toast('✗ Please drop a .csv file'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => parseCsv(ev.target.result);
+  reader.readAsText(file);
+}
+
+function parseCsv(text) {
+  const lines = text.trim().split('\n').filter(l=>l.trim());
+  if (lines.length < 2) { toast('✗ CSV needs a header row + at least 1 contact'); return; }
+  const header = lines[0].toLowerCase().split(',').map(h=>h.trim());
+  const ni = header.indexOf('name'), pi = header.indexOf('phone'), li = header.indexOf('lang');
+  if (pi === -1) { toast('✗ CSV must have a "phone" column'); return; }
+  csvContacts = lines.slice(1).map(line => {
+    const cols = line.split(',').map(c=>c.trim());
+    return { name: ni>-1 ? cols[ni] : 'Contact', phone: cols[pi], lang: li>-1 ? cols[li] : 'hi' };
+  }).filter(c => c.phone);
+
+  document.getElementById('csvSummary').textContent = csvContacts.length + ' contacts loaded';
+  document.getElementById('csvRows').innerHTML = csvContacts.slice(0,5).map(c => `
+    <div class="csv-row">
+      <span class="csv-name">${esc(c.name)}</span>
+      <span class="csv-phone">${esc(c.phone)}</span>
+      <span class="csv-lang">${(LANG[c.lang]||{emoji:'?'}).emoji} ${c.lang}</span>
+    </div>`).join('') + (csvContacts.length>5 ? `<div style="font-family:var(--mono);font-size:.65rem;color:var(--text3);padding:.3rem 0">...and ${csvContacts.length-5} more</div>` : '');
+  document.getElementById('csvPreview').style.display = 'block';
+  document.getElementById('campaignControls').style.display = 'flex';
+  document.getElementById('csvDrop').style.display = 'none';
+}
+
+async function startCampaign() {
+  if (!csvContacts.length) return;
+  toast('🚀 Campaign started — ' + csvContacts.length + ' calls');
+  addLog('Campaign started: ' + csvContacts.length + ' contacts', 'info');
+  for (const contact of csvContacts) {
+    try {
+      const r = await fetch(serverUrl + '/call/outbound', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({to:contact.phone, name:contact.name, lang:contact.lang})
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      addLog('✓ Called ' + contact.name + ' (' + contact.phone + ')', 'success');
+    } catch(e) {
+      addLog('✗ ' + contact.phone + ': ' + e.message, 'error');
+    }
+    await sleep(2000); // 2 sec between calls
+  }
+  addLog('Campaign complete', 'info');
+}
+
+function clearCsv() {
+  csvContacts = [];
+  document.getElementById('csvPreview').style.display = 'none';
+  document.getElementById('campaignControls').style.display = 'none';
+  document.getElementById('csvDrop').style.display = 'block';
+  document.getElementById('csvFile').value = '';
+}
+
+// ── Call log ──
+function addLog(msg, type='') {
+  const log = document.getElementById('callLog');
+  const time = new Date().toLocaleTimeString('en-IN',{hour12:false});
+  // Remove "waiting" placeholder on first log
+  if (log.querySelector('.log-text')?.textContent === 'Waiting for calls...') log.innerHTML = '';
+  const el = document.createElement('div');
+  el.className = 'log-item';
+  el.innerHTML = `<span class="log-time">${time}</span><span class="log-text ${type}">${esc(msg)}</span>`;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('callLog').innerHTML = `
+    <div class="log-item">
+      <span class="log-time">--:--:--</span>
+      <span class="log-text">Log cleared</span>
+    </div>`;
+}
+
+// ────────────────────────────────────────────────────────────
+// PROMPT EDITOR
+// ────────────────────────────────────────────────────────────
+async function loadPrompt() {
+  const el = document.getElementById('promptEditor');
+  el.placeholder = 'Loading...';
+  try {
+    const r = await fetch(serverUrl + '/dashboard/prompt');
+    const d = await r.json();
+    el.value = d.content || '';
+    promptOriginal = el.value;
+    updatePromptStats();
+    buildSectionList();
+    document.getElementById('pmChanged').textContent = 'No';
+    document.getElementById('pmChanged').style.color = 'var(--text2)';
+  } catch(e) {
+    el.placeholder = 'Could not load prompt. Is the server connected?';
+    toast('✗ Could not load prompt from server');
+  }
+}
+
+async function savePrompt() {
+  const content = document.getElementById('promptEditor').value;
+  const btn     = document.getElementById('saveBtn');
+  const status  = document.getElementById('saveStatus');
+
+  btn.disabled = true;
+  status.className = 'save-status saving';
+  status.textContent = '⏳ Saving and reloading on server...';
+
+  try {
+    const r = await fetch(serverUrl + '/dashboard/prompt', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    promptOriginal = content;
+    status.className = 'save-status saved';
+    status.textContent = '✓ Saved and applied — server reloaded the prompt';
+    document.getElementById('pmChanged').textContent = 'No';
+    document.getElementById('pmChanged').style.color = 'var(--text2)';
+    document.getElementById('pmLastSaved').textContent = new Date().toLocaleTimeString('en-IN',{hour12:false});
+    toast('✓ Prompt saved and applied!');
+    setTimeout(() => { status.style.display = 'none'; }, 4000);
+  } catch(e) {
+    status.className = 'save-status error';
+    status.textContent = '✗ Save failed: ' + e.message;
+    toast('✗ Could not save prompt');
+  }
+  btn.disabled = false;
+}
+
+function onPromptChange() {
+  updatePromptStats();
+  const changed = document.getElementById('promptEditor').value !== promptOriginal;
+  document.getElementById('pmChanged').textContent = changed ? 'Yes ●' : 'No';
+  document.getElementById('pmChanged').style.color = changed ? 'var(--yellow)' : 'var(--text2)';
+}
+
+function updatePromptStats() {
+  const text = document.getElementById('promptEditor').value;
+  document.getElementById('pmWords').textContent    = text.split(/\s+/).filter(Boolean).length;
+  document.getElementById('pmChars').textContent    = text.length;
+  document.getElementById('pmLines').textContent    = text.split('\n').length;
+  const sections = (text.match(/^#+ .+/gm)||[]).length;
+  document.getElementById('pmSections').textContent = sections;
+}
+
+function buildSectionList() {
+  const text     = document.getElementById('promptEditor').value;
+  const lines    = text.split('\n');
+  const sections = lines.reduce((acc, line, i) => {
+    if (/^#+ ./.test(line)) acc.push({title: line.replace(/^#+\s*/,''), line: i});
+    return acc;
+  }, []);
+  const list = document.getElementById('sectionList');
+  if (!sections.length) {
+    list.innerHTML = '<div style="padding:.8rem;font-family:var(--mono);font-size:.68rem;color:var(--text3)">No sections found</div>';
+    return;
+  }
+  list.innerHTML = sections.map(s => `
+    <div class="section-item" onclick="jumpToLine(${s.line})">
+      <div class="section-dot"></div>${esc(s.title)}
+    </div>`).join('');
+}
+
+function jumpToLine(lineNum) {
+  const ta    = document.getElementById('promptEditor');
+  const lines = ta.value.split('\n');
+  let pos = 0;
+  for (let i=0; i<lineNum; i++) pos += lines[i].length + 1;
+  ta.focus();
+  ta.setSelectionRange(pos, pos + lines[lineNum].length);
+  // Scroll textarea to line
+  const lineH = ta.scrollHeight / lines.length;
+  ta.scrollTop = lineNum * lineH - ta.clientHeight/2;
+}
+
+// ── Templates ──
+const TEMPLATES = {
+  realestate: `# IDENTITY & ROLE
+You are Priya — AI voice sales assistant for XYZ Construction.
+Your job: call potential buyers about Skyline Residences, Ahmedabad.
+Goals: qualify budget, present flats, book site visits.
+
+# PROJECT DETAILS
+Project: Skyline Residences | Location: Satellite, Ahmedabad
+1 BHK: 650 sq ft | ₹35 lakhs+
+2 BHK: 1050 sq ft | ₹58 lakhs+
+3 BHK: 1450 sq ft | ₹82 lakhs+
+Amenities: Pool, Gym, 24/7 Security, EV Charging, Clubhouse
+Possession: December 2026 | RERA: RAA12345678
+Site visit: Mon-Sun 10AM-7PM | Free pickup from Satellite area
+
+# LANGUAGE RULES
+Mirror user's language exactly. Hindi → Hindi. Gujarati → Gujarati.
+Never use English if user spoke in regional language.
+Default: Gujarati (Ahmedabad audience).
+
+# TONE
+Warm, enthusiastic, like a trusted real estate advisor.
+Use "आप" in Hindi. Keep responses under 30 words. End with 1 question.
+
+# CONVERSATION FLOW
+GREETING → QUALIFY (budget/BHK/purpose) → PRESENT → OBJECTION → BOOK SITE VISIT → CLOSE
+
+# OBJECTION HANDLING
+"Mehnga hai": EMI sirf ₹18,000/month. Kya figure share karoon?
+"Soochna hai": Site visit karein, dekh ke decide karna easy hoga.
+"Busy hoon":   Kab callback karoon aapko?
+
+# OUTPUT FORMAT
+Spoken text only. No bullets. No markdown. Numbers in words.
+End every response with one question.`,
+
+  loan: `# IDENTITY & ROLE
+You are Raj — AI loan advisor for QuickLoan Finance.
+Your job: qualify leads for personal/home/business loans.
+Collect: loan amount, purpose, employment type, monthly income.
+
+# LOAN PRODUCTS
+Personal Loan: ₹50K–₹25L | 12–60 months | 10.5% onwards
+Home Loan:     ₹10L–₹5Cr  | 10–30 years  | 8.5% onwards
+Business Loan: ₹1L–₹50L   | 12–84 months | 14% onwards
+Processing fee: 1–2% | Disbursal: 24–72 hours
+
+# ELIGIBILITY
+Salaried: Min ₹20,000/month, 6+ months experience
+Self-employed: 2+ years business, ITR filed
+Min credit score: 650 | Age: 21–60 years
+
+# LANGUAGE RULES
+Mirror user's language exactly. Default: Hindi.
+Mix Hindi+English naturally if user does (Hinglish is ok).
+
+# CONVERSATION FLOW
+GREETING → LOAN TYPE → AMOUNT → PURPOSE → EMPLOYMENT → INCOME → QUOTE → APPLY
+
+# OUTPUT FORMAT
+Spoken text only. Under 30 words per response. End with 1 question.
+Never promise guaranteed approval. Mention T&C apply.`,
+
+  support: `# IDENTITY & ROLE
+You are Maya — AI customer support agent.
+Your job: resolve order issues, process returns, answer product queries.
+Escalate to human agent if issue cannot be resolved in 3 turns.
+
+# CAPABILITIES
+- Check order status (ask for order ID)
+- Initiate return/refund (within 30 days of delivery)
+- Answer product and policy questions
+- Schedule delivery/pickup rescheduling
+- Escalate to human: complex disputes, missing high-value items
+
+# LANGUAGE RULES
+Mirror user's language. Default: Hindi.
+Be empathetic — customer may be frustrated. Acknowledge first.
+
+# TONE
+Calm, solution-focused, empathetic. Never defensive.
+Acknowledge issue before solving: "Samajh sakti hoon, yeh frustrating hai."
+
+# CONVERSATION FLOW
+GREET → IDENTIFY ISSUE → COLLECT ORDER ID → RESOLVE / ESCALATE → CONFIRM → CLOSE
+
+# OUTPUT FORMAT
+Spoken text only. Under 35 words. End with 1 question or clear next step.`,
+
+  generic: `# IDENTITY & ROLE
+You are an AI voice assistant.
+Your job: [DESCRIBE YOUR AGENT'S PURPOSE HERE]
+
+# LANGUAGE RULES
+Mirror user's language exactly.
+Hindi → respond in Hindi (Devanagari script).
+Gujarati → respond in Gujarati script.
+English → respond in Indian English.
+Never switch unless user switches. Default: Hindi.
+
+# TONE
+Warm, professional, like a trained call center agent.
+Use "आप" in Hindi. Address as Sir/Ma'am or by name if known.
+Keep responses under 35 words. End every turn with ONE question.
+
+# CONVERSATION FLOW
+GREETING → [YOUR FLOW HERE] → CLOSE → GOODBYE
+
+# OUTPUT FORMAT
+Spoken text only. No bullets. No markdown. No asterisks.
+Numbers in words: "das hazaar" not "10,000".
+End every response with exactly one question.
+
+# SAFETY & COMPLIANCE
+Never claim to be human if sincerely asked.
+Never collect OTPs, Aadhaar, or card numbers.
+Call only between 9 AM and 9 PM IST.`
+};
+
+function loadTemplate(name) {
+  if (!TEMPLATES[name]) return;
+  if (document.getElementById('promptEditor').value.trim() &&
+      !confirm('Replace current prompt with this template?')) return;
+  document.getElementById('promptEditor').value = TEMPLATES[name];
+  promptOriginal = '';
+  onPromptChange();
+  buildSectionList();
+  toast('✓ Template loaded — click Save to apply');
+}
+
+// ────────────────────────────────────────────────────────────
+// UTILS
+// ────────────────────────────────────────────────────────────
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Auto connect on load
+window.addEventListener('load', connect);
+</script>
+</body>
+</html>
