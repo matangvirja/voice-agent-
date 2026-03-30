@@ -522,9 +522,9 @@ The prompt is the only file you need to change. Here are ready-to-use starting p
 ## Roadmap
 
 ### v1.1 — In Progress
-- [ ] Campaign manager (bulk calling from CSV)
-- [ ] Live dashboard with real-time transcripts
-- [ ] Smart callback scheduler
+- [x] Campaign manager (bulk calling from CSV)
+- [x] Live dashboard with real-time transcripts
+- [x] Smart callback scheduler
 
 ### v1.2 — Planned
 - [ ] Upgrade to Gemini 2.5 Flash Native Audio
