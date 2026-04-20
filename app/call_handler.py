@@ -189,27 +189,57 @@ class CallHandler:
             self.history = self.history[-20:]
 
     async def _speak(self, text: str, lang: str):
-        try:
-            mp3_bytes = await speak_to_bytes(text, lang)
-            if not mp3_bytes:
-                return
+    try:
+        if not self.stream_sid:
+            print(f"[Call {self.call_id}] Cannot speak — stream_sid not set yet")
+            return
 
-            mulaw_bytes = convert_mp3_to_mulaw(mp3_bytes)
-            if not mulaw_bytes:
-                return
+        mp3_bytes = await speak_to_bytes(text, lang)
+        if not mp3_bytes:
+            print(f"[Call {self.call_id}] TTS returned empty bytes")
+            return
 
-            for i in range(0, len(mulaw_bytes), CHUNK_SIZE):
-                chunk   = mulaw_bytes[i:i + CHUNK_SIZE]
-                payload = base64.b64encode(chunk).decode("utf-8")
-                await self.ws.send_json({
-                    "event":     "media",
-                    "streamSid": self.stream_sid,
-                    "media":     {"payload": payload}
-                })
-            print(f"[Call {self.call_id}] Spoken: {text[:60]}...")
+        mulaw_bytes = convert_mp3_to_mulaw(mp3_bytes)
+        if not mulaw_bytes:
+            print(f"[Call {self.call_id}] ffmpeg mulaw conversion returned empty — is ffmpeg installed?")
+            return
 
-        except Exception as e:
-            print(f"[Call {self.call_id}] Speak error: {e}")
+        for i in range(0, len(mulaw_bytes), CHUNK_SIZE):
+            chunk   = mulaw_bytes[i:i + CHUNK_SIZE]
+            payload = base64.b64encode(chunk).decode("utf-8")
+            await self.ws.send_json({
+                "event":     "media",
+                "streamSid": self.stream_sid,
+                "media":     {"payload": payload}
+            })
+        print(f"[Call {self.call_id}] Spoken: {text[:60]}...")
+
+    except Exception as e:
+        print(f"[Call {self.call_id}] Speak error: {e}")
+        import traceback
+        traceback.print_exc()
+    # async def _speak(self, text: str, lang: str):
+    #     try:
+    #         mp3_bytes = await speak_to_bytes(text, lang)
+    #         if not mp3_bytes:
+    #             return
+
+    #         mulaw_bytes = convert_mp3_to_mulaw(mp3_bytes)
+    #         if not mulaw_bytes:
+    #             return
+
+    #         for i in range(0, len(mulaw_bytes), CHUNK_SIZE):
+    #             chunk   = mulaw_bytes[i:i + CHUNK_SIZE]
+    #             payload = base64.b64encode(chunk).decode("utf-8")
+    #             await self.ws.send_json({
+    #                 "event":     "media",
+    #                 "streamSid": self.stream_sid,
+    #                 "media":     {"payload": payload}
+    #             })
+    #         print(f"[Call {self.call_id}] Spoken: {text[:60]}...")
+
+    #     except Exception as e:
+    #         print(f"[Call {self.call_id}] Speak error: {e}")
 
     def _reset_audio(self):
         self.audio_chunks   = []
