@@ -211,11 +211,12 @@ async def make_outbound_call(request: Request):
             return {"error": "NGROK_URL not set — current value: " + repr(NGROK_URL)}
 
         call = twilio_client.calls.create(
-            to=to_number,
-            from_=TWILIO_NUMBER,
-            url=f"{NGROK_URL}/call/incoming?name={name}&lang={lang}",
-            method="POST"
-        )
+        to=to_number,
+        from_=TWILIO_NUMBER,
+        url=f"{NGROK_URL}/call/incoming?name={name}&lang={lang}",
+        method="POST",
+    # Remove any existing timeout settings
+)
         return {"call_sid": call.sid, "status": "initiated", "to": to_number}
 
     except Exception as e:
