@@ -60,6 +60,14 @@ async def startup():
     await init_db()
     print("Server ready. Waiting for calls...")
     print("Dashboard: http://localhost:8000/dashboard/")
+    import subprocess
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
+        print(f">>> ffmpeg OK: {result.stdout.split(chr(10))[0]}")
+    except FileNotFoundError:
+        print("!!! ffmpeg NOT FOUND — audio conversion will fail")
+    
+    print("Server ready.")
 
 
 # ── Inbound Call Webhook ─────────────────────────────────────
