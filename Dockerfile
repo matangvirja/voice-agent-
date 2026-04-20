@@ -11,4 +11,4 @@ COPY . .
 
 EXPOSE 8080
 
-CMD ["uvicorn", "app.main:voice_app", "--host", "0.0.0.0", "--port", "8080", "--ws", "websockets", "--timeout-keep-alive", "75"]
+CMD ["uvicorn", "app.main:voice_app", "--host", "0.0.0.0", "--port", "8000", "--ws", "websockets", "--timeout-keep-alive", "75"]
