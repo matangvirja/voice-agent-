@@ -113,6 +113,20 @@ async def incoming_call(request: Request):
     return PlainTextResponse(twiml, media_type="text/xml")
 
 # ── WebSocket Audio Stream ───────────────────────────────────
+# @voice_app.websocket("/audio-stream/{call_id}")
+# async def audio_stream(websocket: WebSocket, call_id: str):
+#     await websocket.accept()
+
+#     name = websocket.query_params.get("name", "Sir/Ma'am")
+#     lang = websocket.query_params.get("lang", "hi")
+
+#     handler = CallHandler(websocket, call_id, name=name, lang=lang)
+#     active_calls[call_id] = handler
+
+#     try:
+#         await handler.handle()
+#     finally:
+#         active_calls.pop(call_id, None)
 @voice_app.websocket("/audio-stream/{call_id}")
 async def audio_stream(websocket: WebSocket, call_id: str):
     await websocket.accept()
@@ -125,6 +139,10 @@ async def audio_stream(websocket: WebSocket, call_id: str):
 
     try:
         await handler.handle()
+    except Exception as e:
+        print(f"!!! CALL HANDLER CRASH: {e}")  # ADD THIS
+        import traceback
+        traceback.print_exc()                   # ADD THIS — shows full error
     finally:
         active_calls.pop(call_id, None)
 
