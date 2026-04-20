@@ -4,6 +4,9 @@ Twilio Call Handler — with Live Dashboard Broadcasting
 Every conversation turn is broadcast to all connected
 dashboard clients via WebSocket in real time.
 """
+import imageio_ffmpeg
+import os
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
 
 import asyncio
 import base64
