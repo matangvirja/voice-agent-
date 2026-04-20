@@ -125,26 +125,51 @@ async def audio_stream(websocket: WebSocket, call_id: str):
 
 
 # ── Outbound Call ────────────────────────────────────────────
+# @voice_app.post("/call/outbound")
+# async def make_outbound_call(request: Request):
+#     body      = await request.json()
+#     to_number = body.get("to")
+#     name      = body.get("name", "Sir/Ma'am")
+#     lang      = body.get("lang", "hi")
+
+#     if not to_number:
+#         return {"error": "to number is required"}
+#     if not NGROK_URL:
+#         return {"error": "NGROK_URL not set in .env"}
+
+#     call = twilio_client.calls.create(
+#         to=to_number,
+#         from_=TWILIO_NUMBER,
+#         url=f"{NGROK_URL}/call/incoming?name={name}&lang={lang}",
+#         method="POST"
+#     )
+#     print(f"Outbound call → {to_number} | {name} | SID: {call.sid}")
+#     return {"call_sid": call.sid, "status": "initiated", "to": to_number}
+
 @voice_app.post("/call/outbound")
 async def make_outbound_call(request: Request):
-    body      = await request.json()
-    to_number = body.get("to")
-    name      = body.get("name", "Sir/Ma'am")
-    lang      = body.get("lang", "hi")
+    try:
+        body      = await request.json()
+        to_number = body.get("to")
+        name      = body.get("name", "Sir/Ma'am")
+        lang      = body.get("lang", "hi")
 
-    if not to_number:
-        return {"error": "to number is required"}
-    if not NGROK_URL:
-        return {"error": "NGROK_URL not set in .env"}
+        if not to_number:
+            return {"error": "to number is required"}
+        if not NGROK_URL:
+            return {"error": "NGROK_URL not set — current value: " + repr(NGROK_URL)}
 
-    call = twilio_client.calls.create(
-        to=to_number,
-        from_=TWILIO_NUMBER,
-        url=f"{NGROK_URL}/call/incoming?name={name}&lang={lang}",
-        method="POST"
-    )
-    print(f"Outbound call → {to_number} | {name} | SID: {call.sid}")
-    return {"call_sid": call.sid, "status": "initiated", "to": to_number}
+        call = twilio_client.calls.create(
+            to=to_number,
+            from_=TWILIO_NUMBER,
+            url=f"{NGROK_URL}/call/incoming?name={name}&lang={lang}",
+            method="POST"
+        )
+        return {"call_sid": call.sid, "status": "initiated", "to": to_number}
+
+    except Exception as e:
+        print(f"Outbound call error: {e}")
+        return {"error": str(e)}
 
 
 # ── Health Check ─────────────────────────────────────────────
