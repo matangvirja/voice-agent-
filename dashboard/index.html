@@ -409,7 +409,7 @@ main { position: relative; z-index: 1; padding: 1.5rem 2rem 3rem; max-width: 140
   <!-- ── SERVER BAR (shared) ── -->
   <div class="server-bar">
     <label>Server:</label>
-    <input class="server-input" id="serverUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+    <input class="server-input" id="serverUrl" placeholder="http://localhost:8000">
     <button class="btn btn-primary" onclick="connect()">Connect</button>
     <div class="conn-status">
       <div class="conn-dot disconnected" id="connDot"></div>
@@ -748,8 +748,8 @@ main { position: relative; z-index: 1; padding: 1.5rem 2rem 3rem; max-width: 140
 // ────────────────────────────────────────────────────────────
 // let serverUrl      = 'http://localhost:8000';
 // let wsUrl          = 'ws://localhost:8000';
-const serverUrl = window.location.origin;
-const wsUrl = window.location.protocol === 'https:' 
+let serverUrl = window.location.origin;
+let wsUrl = window.location.protocol === 'https:' 
   ? 'wss://' + window.location.host 
   : 'ws://' + window.location.host;
 let ws             = null;
@@ -815,8 +815,12 @@ function setConn(status) {
 }
 
 function connect() {
-  serverUrl = document.getElementById('serverUrl').value.trim().replace(/\/$/,'');
-  wsUrl     = serverUrl.replace('http','ws');
+  const inputVal = document.getElementById('serverUrl').value.trim().replace(/\/$/,'');
+  if (inputVal) {
+    serverUrl = inputVal;
+    wsUrl = inputVal.replace('https','wss').replace('http','ws');
+  }
+  
   setConn('connecting');
   fetch(serverUrl + '/')
     .then(r => r.json())
@@ -1460,7 +1464,10 @@ function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Auto connect on load
-window.addEventListener('load', connect);
+window.addEventListener('load', () => {
+  document.getElementById('serverUrl').value = window.location.origin;
+  connect();
+});
 </script>
 </body>
 </html>
