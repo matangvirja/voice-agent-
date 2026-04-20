@@ -63,6 +63,29 @@ async def startup():
 
 
 # ── Inbound Call Webhook ─────────────────────────────────────
+# @voice_app.post("/call/incoming")
+# async def incoming_call(request: Request):
+#     form   = await request.form()
+#     caller = form.get("From", "unknown")
+#     name   = request.query_params.get("name", "Sir/Ma'am")
+#     lang   = request.query_params.get("lang", "hi")
+
+#     print(f"Incoming call from: {caller} | Name: {name} | Lang: {lang}")
+
+#     call_id = await start_call(caller)
+#     host    = request.headers.get("host", "localhost")
+#     ws_url  = f"wss://{host}/audio-stream/{call_id}?name={name}&lang={lang}"
+
+#     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
+# <Response>
+#   <Connect>
+#     <Stream url="{ws_url}">
+#       <Parameter name="call_id" value="{call_id}"/>
+#     </Stream>
+#   </Connect>
+# </Response>"""
+#     return PlainTextResponse(twiml, media_type="text/xml")
+
 @voice_app.post("/call/incoming")
 async def incoming_call(request: Request):
     form   = await request.form()
@@ -70,11 +93,14 @@ async def incoming_call(request: Request):
     name   = request.query_params.get("name", "Sir/Ma'am")
     lang   = request.query_params.get("lang", "hi")
 
-    print(f"Incoming call from: {caller} | Name: {name} | Lang: {lang}")
-
     call_id = await start_call(caller)
-    host    = request.headers.get("host", "localhost")
-    ws_url  = f"wss://{host}/audio-stream/{call_id}?name={name}&lang={lang}"
+    
+    # Use NGROK_URL directly — more reliable than host header on Railway
+    base    = NGROK_URL or f"https://{request.headers.get('host')}"
+    ws_url  = base.replace("https://", "wss://").replace("http://", "ws://")
+    ws_url  = f"{ws_url}/audio-stream/{call_id}?name={name}&lang={lang}"
+
+    print(f">>> WS URL: {ws_url}")
 
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -85,7 +111,6 @@ async def incoming_call(request: Request):
   </Connect>
 </Response>"""
     return PlainTextResponse(twiml, media_type="text/xml")
-
 
 # ── WebSocket Audio Stream ───────────────────────────────────
 @voice_app.websocket("/audio-stream/{call_id}")
