@@ -746,8 +746,12 @@ main { position: relative; z-index: 1; padding: 1.5rem 2rem 3rem; max-width: 140
 // ────────────────────────────────────────────────────────────
 // STATE
 // ────────────────────────────────────────────────────────────
-let serverUrl      = 'http://localhost:8000';
-let wsUrl          = 'ws://localhost:8000';
+// let serverUrl      = 'http://localhost:8000';
+// let wsUrl          = 'ws://localhost:8000';
+const serverUrl = window.location.origin;
+const wsUrl = window.location.protocol === 'https:' 
+  ? 'wss://' + window.location.host 
+  : 'ws://' + window.location.host;
 let ws             = null;
 let pollTimer      = null;
 let activeCalls    = {};
