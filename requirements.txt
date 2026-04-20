@@ -22,6 +22,7 @@ asyncpg                 # Async PostgreSQL driver (Supabase)
 sounddevice             # Microphone input / speaker output
 numpy                   # Audio array processing
 scipy                   # WAV file I/O
+imageio-ffmpeg
 
 # ── Utilities ────────────────────────────────────────────────
 python-dotenv           # Load .env file
